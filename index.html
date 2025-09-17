@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacman Jeu</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #ffff00;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #gameBoard {
+            border: 2px solid #0000ff;
+            background-color: #000;
+            position: relative;
+            width: 600px;
+            height: 400px;
+        }
+
+        .wall {
+            background-color: #0000ff;
+            position: absolute;
+        }
+
+        .dot {
+            background-color: #ffff00;
+            border-radius: 50%;
+            position: absolute;
+            width: 6px;
+            height: 6px;
+        }
+
+        .power-pellet {
+            background-color: #ffff00;
+            border-radius: 50%;
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        #pacman {
+            background-color: #ffff00;
+            border-radius: 50%;
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            transition: all 0.1s ease;
+        }
+
+        .ghost {
+            border-radius: 50% 50% 0 0;
+            position: absolute;
+            width: 20px;
+            height: 20px;
+        }
+
+        .ghost.red { background-color: #ff0000; }
+        .ghost.pink { background-color: #ffb8ff; }
+        .ghost.cyan { background-color: #00ffff; }
+        .ghost.orange { background-color: #ffb852; }
+
+        #score {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        #controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border: 2px solid #ffff00;
+            display: none;
+        }
+
+        button {
+            background-color: #ffff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 PACMAN JEU 🎮</h1>
+    <div id="score">Score: 0</div>
+    
+    <div id="gameBoard">
+        <div id="pacman"></div>
+        <div id="gameOver">
+            <h2>Jeu Terminé!</h2>
+            <p>Score Final: <span id="finalScore">0</span></p>
+            <button onclick="restartGame()">Rejouer</button>
+        </div>
+    </div>
+
+    <div id="controls">
+        <p>🎮 Contrôles: Utilisez les flèches du clavier pour déplacer Pacman</p>
+        <p>↑ ↓ ← → ou WASD</p>
+        <button onclick="startGame()">Commencer le Jeu</button>
+        <button onclick="pauseGame()">Pause</button>
+    </div>
+
+    <script>
+        // Game variables
+        let gameBoard = document.getElementById('gameBoard');
+        let pacman = document.getElementById('pacman');
+        let scoreElement = document.getElementById('score');
+        
+        let pacmanPosition = { x: 40, y: 40 };
+        let score = 0;
+        let gameRunning = false;
+        let gamePaused = false;
+        let gameInterval;
+        let ghostInterval;
+        
+        // Game dimensions
+        const BOARD_WIDTH = 600;
+        const BOARD_HEIGHT = 400;
+        const CELL_SIZE = 20;
+        
+        // Dots and walls
+        let dots = [];
+        let walls = [];
+        let ghosts = [];
+        
+        // Initialize the game
+        function initGame() {
+            createWalls();
+            createDots();
+            createGhosts();
+            updatePacmanPosition();
+            updateScore();
+        }
+        
+        function createWalls() {
+            walls = [];
+            // Create border walls
+            for (let x = 0; x < BOARD_WIDTH; x += CELL_SIZE) {
+                createWall(x, 0); // Top wall
+                createWall(x, BOARD_HEIGHT - CELL_SIZE); // Bottom wall
+            }
+            for (let y = 0; y < BOARD_HEIGHT; y += CELL_SIZE) {
+                createWall(0, y); // Left wall
+                createWall(BOARD_WIDTH - CELL_SIZE, y); // Right wall
+            }
+            
+            // Create some internal walls
+            createWall(100, 60);
+            createWall(120, 60);
+            createWall(140, 60);
+            createWall(200, 100);
+            createWall(200, 120);
+            createWall(200, 140);
+            createWall(400, 60);
+            createWall(420, 60);
+            createWall(440, 60);
+            createWall(300, 200);
+            createWall(320, 200);
+            createWall(340, 200);
+        }
+        
+        function createWall(x, y) {
+            let wall = document.createElement('div');
+            wall.className = 'wall';
+            wall.style.left = x + 'px';
+            wall.style.top = y + 'px';
+            wall.style.width = CELL_SIZE + 'px';
+            wall.style.height = CELL_SIZE + 'px';
+            gameBoard.appendChild(wall);
+            walls.push({ x, y });
+        }
+        
+        function createDots() {
+            dots = [];
+            for (let x = 30; x < BOARD_WIDTH - 30; x += 30) {
+                for (let y = 30; y < BOARD_HEIGHT - 30; y += 30) {
+                    if (!isWall(x, y) && !isNearWall(x, y)) {
+                        createDot(x, y);
+                    }
+                }
+            }
+        }
+        
+        function createDot(x, y) {
+            let dot = document.createElement('div');
+            dot.className = 'dot';
+            dot.style.left = (x - 3) + 'px';
+            dot.style.top = (y - 3) + 'px';
+            gameBoard.appendChild(dot);
+            dots.push({ x, y, element: dot });
+        }
+        
+        function createGhosts() {
+            ghosts = [];
+            const ghostColors = ['red', 'pink', 'cyan', 'orange'];
+            const startPositions = [
+                { x: 500, y: 60 },
+                { x: 520, y: 60 },
+                { x: 500, y: 80 },
+                { x: 520, y: 80 }
+            ];
+            
+            for (let i = 0; i < 4; i++) {
+                let ghost = document.createElement('div');
+                ghost.className = `ghost ${ghostColors[i]}`;
+                ghost.style.left = startPositions[i].x + 'px';
+                ghost.style.top = startPositions[i].y + 'px';
+                gameBoard.appendChild(ghost);
+                
+                ghosts.push({
+                    x: startPositions[i].x,
+                    y: startPositions[i].y,
+                    element: ghost,
+                    direction: getRandomDirection()
+                });
+            }
+        }
+        
+        function isWall(x, y) {
+            return walls.some(wall => 
+                Math.abs(wall.x - x) < CELL_SIZE && Math.abs(wall.y - y) < CELL_SIZE
+            );
+        }
+        
+        function isNearWall(x, y) {
+            return walls.some(wall => 
+                Math.abs(wall.x - x) < CELL_SIZE * 1.5 && Math.abs(wall.y - y) < CELL_SIZE * 1.5
+            );
+        }
+        
+        function updatePacmanPosition() {
+            pacman.style.left = pacmanPosition.x + 'px';
+            pacman.style.top = pacmanPosition.y + 'px';
+        }
+        
+        function updateScore() {
+            scoreElement.textContent = `Score: ${score}`;
+        }
+        
+        function movePacman(dx, dy) {
+            if (!gameRunning || gamePaused) return;
+            
+            let newX = pacmanPosition.x + dx;
+            let newY = pacmanPosition.y + dy;
+            
+            // Check boundaries
+            if (newX < 20 || newX > BOARD_WIDTH - 40 || newY < 20 || newY > BOARD_HEIGHT - 40) {
+                return;
+            }
+            
+            // Check wall collision
+            if (isWall(newX, newY)) {
+                return;
+            }
+            
+            pacmanPosition.x = newX;
+            pacmanPosition.y = newY;
+            updatePacmanPosition();
+            
+            // Check dot collision
+            checkDotCollision();
+            
+            // Check ghost collision
+            checkGhostCollision();
+        }
+        
+        function checkDotCollision() {
+            dots = dots.filter(dot => {
+                if (Math.abs(dot.x - pacmanPosition.x - 10) < 15 && 
+                    Math.abs(dot.y - pacmanPosition.y - 10) < 15) {
+                    dot.element.remove();
+                    score += 10;
+                    updateScore();
+                    
+                    // Check win condition
+                    if (dots.length === 0) {
+                        endGame(true);
+                    }
+                    
+                    return false;
+                }
+                return true;
+            });
+        }
+        
+        function checkGhostCollision() {
+            ghosts.forEach(ghost => {
+                if (Math.abs(ghost.x - pacmanPosition.x) < 15 && 
+                    Math.abs(ghost.y - pacmanPosition.y) < 15) {
+                    endGame(false);
+                }
+            });
+        }
+        
+        function moveGhosts() {
+            if (!gameRunning || gamePaused) return;
+            
+            ghosts.forEach(ghost => {
+                // Simple AI: move randomly, change direction if hitting wall
+                let newX = ghost.x;
+                let newY = ghost.y;
+                
+                switch (ghost.direction) {
+                    case 'up': newY -= 2; break;
+                    case 'down': newY += 2; break;
+                    case 'left': newX -= 2; break;
+                    case 'right': newX += 2; break;
+                }
+                
+                // Check boundaries and walls
+                if (newX < 20 || newX > BOARD_WIDTH - 40 || newY < 20 || newY > BOARD_HEIGHT - 40 || 
+                    isWall(newX, newY)) {
+                    ghost.direction = getRandomDirection();
+                } else {
+                    ghost.x = newX;
+                    ghost.y = newY;
+                    ghost.element.style.left = ghost.x + 'px';
+                    ghost.element.style.top = ghost.y + 'px';
+                }
+            });
+        }
+        
+        function getRandomDirection() {
+            const directions = ['up', 'down', 'left', 'right'];
+            return directions[Math.floor(Math.random() * directions.length)];
+        }
+        
+        function startGame() {
+            if (gameRunning) return;
+            
+            gameRunning = true;
+            gamePaused = false;
+            
+            // Reset game state
+            pacmanPosition = { x: 40, y: 40 };
+            score = 0;
+            
+            // Clear existing elements
+            document.querySelectorAll('.dot, .wall, .ghost').forEach(el => el.remove());
+            
+            initGame();
+            
+            // Start ghost movement
+            ghostInterval = setInterval(moveGhosts, 100);
+        }
+        
+        function pauseGame() {
+            gamePaused = !gamePaused;
+        }
+        
+        function endGame(won) {
+            gameRunning = false;
+            clearInterval(ghostInterval);
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
+            
+            if (won) {
+                document.querySelector('#gameOver h2').textContent = 'Félicitations! Vous avez gagné!';
+            } else {
+                document.querySelector('#gameOver h2').textContent = 'Game Over!';
+            }
+        }
+        
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+        
+        // Keyboard controls
+        document.addEventListener('keydown', function(event) {
+            const key = event.key.toLowerCase();
+            const speed = 20;
+            
+            switch (key) {
+                case 'arrowup':
+                case 'w':
+                    movePacman(0, -speed);
+                    break;
+                case 'arrowdown':
+                case 's':
+                    movePacman(0, speed);
+                    break;
+                case 'arrowleft':
+                case 'a':
+                    movePacman(-speed, 0);
+                    break;
+                case 'arrowright':
+                case 'd':
+                    movePacman(speed, 0);
+                    break;
+                case ' ':
+                    pauseGame();
+                    break;
+            }
+        });
+        
+        // Initialize game on page load
+        initGame();
+    </script>
+</body>
+</html>

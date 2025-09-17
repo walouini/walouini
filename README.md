@@ -1,16 +1,45 @@
-## Hi there 👋
+# 🎮 Pacman Jeu
 
-<!--
-**walouini/walouini** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+Bienvenue dans mon jeu Pacman! Un jeu classique recréé en HTML, CSS et JavaScript.
 
-Here are some ideas to get you started:
+## 🎯 Comment jouer
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+1. Ouvrez `index.html` dans votre navigateur
+2. Cliquez sur "Commencer le Jeu"
+3. Utilisez les flèches du clavier (↑ ↓ ← →) ou WASD pour déplacer Pacman
+4. Collectez tous les points jaunes pour gagner
+5. Évitez les fantômes colorés!
+
+## 🕹️ Contrôles
+
+- **Flèches directionnelles** ou **WASD** : Déplacer Pacman
+- **Espace** : Pause/Resume
+- **Bouton "Commencer le Jeu"** : Démarrer une nouvelle partie
+- **Bouton "Pause"** : Mettre en pause
+
+## 🎨 Fonctionnalités
+
+- ✅ Gameplay Pacman classique
+- ✅ Système de score
+- ✅ Fantômes IA avec mouvements aléatoires
+- ✅ Détection de collision
+- ✅ Interface en français
+- ✅ Design rétro authentique
+- ✅ Contrôles au clavier réactifs
+
+## 🚀 Démarrage rapide
+
+```bash
+# Cloner le repository
+git clone https://github.com/walouini/walouini.git
+
+# Ouvrir le jeu
+# Option 1: Ouvrir index.html directement dans le navigateur
+# Option 2: Utiliser un serveur local
+python3 -m http.server 8000
+# Puis aller sur http://localhost:8000
+```
+
+---
+
+*Créé avec ❤️ pour le plaisir du jeu rétro!*
